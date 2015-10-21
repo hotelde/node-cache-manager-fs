@@ -63,4 +63,4 @@ npm run coverage
 
 ## License
 
-node-cache-manager is licensed under the MIT license.
+cache-manager-fs is licensed under the MIT license.
