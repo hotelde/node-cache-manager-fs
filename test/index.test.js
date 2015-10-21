@@ -1,0 +1,200 @@
+var assert = require('chai').assert;
+var store = require('../index.js')
+var fs = require('fs');
+var cacheDirectory = 'test/customCache';
+
+describe('test for the hde-disk-store module', function() {
+	// remove test directory after run	
+	after(function(done) {
+		// create a test store
+		var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+		// cleanup all entries in the cache
+		s.cleancache(function(err) {
+			assert(err === null);
+			// and remove test data directory
+			setTimeout(function(){
+				fs.rmdirSync(s.options.path);
+				done(); 				
+			}, 100);			
+		}); 
+	});
+	describe('construction', function() {
+		it('simple create cache test', function()
+		{								
+			// create a store with default values	
+			var s = store.create();
+			// remove folder after testrun 
+			after(function(){ fs.rmdirSync(s.options.path); });
+			// check the creation result	
+			assert.isObject(s);
+			assert.isObject(s.options);
+			assert.isTrue(fs.existsSync(s.options.path))
+		});
+		it('create cache with option path test', function() {
+			// create a store								
+			var s = store.create({options: {path:cacheDirectory, preventfill:true}});
+			// check path option creation			
+			assert.isObject(s);
+			assert.isObject(s.options);
+			assert.isTrue(fs.existsSync(s.options.path))	
+			assert(s.options.path == cacheDirectory);		
+		});
+	});
+	describe('get', function() {		
+		it('simple get test with not existing key', function(done)
+		{
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});			
+			s.get('asdf', function(err, data)
+			{
+				assert(data === null);	
+				done();			
+			});			
+		});
+		it('test missing file on disk', function(done){
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			s.set('test','test', function(err)
+			{
+				assert(err === null);
+				var tmpfilename = s.collection['test'].filename; 
+				s.collection['test'].filename = null;
+				s.get('test', function(err,data) {
+					assert(err !== null);
+					assert(data == null);						
+					s.collection['test'].filename = tmpfilename;
+					s.del('test', function(err)
+					{
+						assert(err == null);
+						done();
+					});									
+				})						
+			});
+		});
+		it('test expired of key (and also ttl option on setting)', function(done)
+		{
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});			
+			s.set('asdf','blabla', {ttl:-1000}, function(err)
+			{
+				assert(err === null)
+				s.get('asdf',function(err,data){				
+					assert(err === null, 'error is not null!'+err);
+					assert(data === null);		
+					done();		
+				})
+			});
+		})
+	});
+	describe('set', function() {	
+		it('simple set test', function(done)
+		{			
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});					
+			var data = 'a lot of data in a file'
+			s.set('asdf',data, function(err,data2)
+			{
+				assert(err === null);
+				assert(data2,'check if entry has been returned on insert');
+				s.get('asdf', function(err, data2)
+				{
+					assert(data2,'check if entry could be retrieved');
+					assert(data === data2);
+					done();				
+				});				
+			});									
+		});	
+	});
+	describe('del / reset', function() {
+		it('simple del test for not existing key', function(done)
+		{
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			s.del('not existing', function(err) {
+				done();
+			});			
+		});
+		it('successfull deletion', function(done)
+		{
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			s.set('nix','empty', function(err) {
+				assert(err === null);
+				s.reset('nix', function(err) {
+					done();	
+				});							
+			});			
+		});		
+		it('reset callback', function(done)
+		{
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			s.set('test','test', function(err)
+			{
+				assert(err === null);
+				s.reset(function(error) {
+					assert(err === null);
+					done();
+				})
+			});
+		});
+	});
+	describe('isCacheableValue', function(){
+		it('works', function(){
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			assert(!s.isCacheableValue(null));									
+		});
+	});
+	describe('integrationtests', function() {
+		it('cache initialization on start', function(done) {
+			// create store
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			// save element
+			s.set('RestoreDontSurvive', 'data', {ttl:-1}, function(err) {
+				assert(err === null);
+				s.set('RestoreTest','test', function(err)
+				{
+					var t=store.create({options: {path:cacheDirectory, fillcallback: function() {
+						//fill complete
+						t.get('RestoreTest', function(err, data) {
+							assert(data === 'test');
+							t.get('RestoreDontSurvive', function(err,data) {
+								assert(err === null);
+								assert(data === null);
+								done();	
+							});							
+						});										
+					}
+					}});				
+				});
+			});
+		});
+		it('max size option', function(done){
+			// create store
+			var s=store.create({options: {path:cacheDirectory, preventfill:true, maxsize:1}});
+			s.set('one', 'dataone', {ttl:-1}, function(err) {
+				assert(err === null);						
+				assert(Object.keys(s.collection).length==1);		
+				s.set('two','datatwo', {ttl:10000}, function(err) {					
+					assert(err === null);
+					// check if the last key has been thrown out of the cache (because it is expired)
+					assert(Object.keys(s.collection).length==1);						
+					s.set('a','a', {ttl:10000}, function(err) {
+						assert(err === null);
+						assert(Object.keys(s.collection).length==1);
+						s.options.maxsize = 150;
+						s.set('b','b', {ttl:100}, function(err){
+							assert(err === null);
+							s.set('c','c', {ttl:100}, function(err){
+								assert(err === null);
+								// now b should be removed from the cache, a should exists
+								s.get('a', function(err, data) {
+									assert(err === null);
+									assert(data,'a');			
+									s.get('b', function(err,data){
+										assert(err === null);
+										assert(data === null);
+										done();													
+									});
+								});
+							});
+						});
+					});
+				});
+			});			
+		});		
+	});
+});

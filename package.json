@@ -1,0 +1,45 @@
+{
+  "name": "cache-manager-fs",
+  "version": "1.0.0",
+  "description": "file system store for node cache manager",
+  "keywords": ["cache-manager", "storage", "filesystem"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hotelde/node-cache-manager-fs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hotelde/node-cache-manager-fs/issues"
+  },  
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "coverage": "mocha  --require blanket -R html-cov >coverage.html && coverage.html"
+  },
+  "author": {
+    "name":"Markus Pfann",
+    "email":"pfann@hotel.de"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "async": "^1.4.2",
+    "cache-manager": "^1.1.0"
+  },
+  "devDependencies": {
+    "blanket": "^1.1.7",
+    "chai": "^3.3.0",
+    "mocha": "^2.3.3"
+  },
+  "config": {
+    "blanket": {
+      "pattern": "///[\\w-]+\\.js$/",
+      "data-cover-never": [
+        "node_modules",
+        "public",
+        "/tests.js"
+      ],
+      "data-cover-reporter-options": {
+        "shortnames": true
+      }
+    }
+  }
+}
