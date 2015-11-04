@@ -1,44 +1,37 @@
 {
   "name": "cache-manager-fs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "file system store for node cache manager",
-  "keywords": ["cache-manager", "storage", "filesystem"],
+  "keywords": [
+    "cache-manager",
+    "storage",
+    "filesystem"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hotelde/node-cache-manager-fs.git"
   },
   "bugs": {
     "url": "https://github.com/hotelde/node-cache-manager-fs/issues"
-  },  
+  },
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "coverage": "mocha  --require blanket -R html-cov >coverage.html && coverage.html"	
+    "coverage" : "npm run create-coverage && npm run show-coverage",
+    "create-coverage": "node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec -t 5000",
+    "show-coverage" : "start coverage\\lcov-report\\index.html"
   },
-  "author": {
-    "name":"Markus Pfann",
-    "email":"pfann@hotel.de"
-  },
-  "license": "MIT",
+  "author": "Markus Pfann",
+  "license": "ISC",
   "dependencies": {
-    "async": "^1.4.2"
+    "async": "^1.4.2",
+    "cache-manager": "^1.1.0",    
+    "extend": "^3.0.0",
+    "fs-promise": "^0.3.1"
   },
   "devDependencies": {
-    "blanket": "^1.1.7",
     "chai": "^3.3.0",
+    "istanbul": "^0.4.0",
     "mocha": "^2.3.3"
-  },
-  "config": {
-    "blanket": {
-      "pattern": "///[\\w-]+\\.js$/",
-      "data-cover-never": [
-        "node_modules",
-        "public",
-        "/tests.js"
-      ],
-      "data-cover-reporter-options": {
-        "shortnames": true
-      }
-    }
   }
 }
