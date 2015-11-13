@@ -312,6 +312,19 @@ DiskStore.prototype.get = function (key, cb) {
 };
 
 /**
+ * get keys stored in cache
+ * @param {Function} cb
+ */
+DiskStore.prototype.keys = function (cb) {
+
+	cb = typeof cb === 'function' ? cb : noop;
+
+	var keys = Object.keys(this.collection);
+
+	cb(null, keys);
+};
+
+/**
  * cleanup cache on disk -> delete all used files from the cache
  */
 DiskStore.prototype.reset = function (key, cb) {
