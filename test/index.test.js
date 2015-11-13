@@ -136,6 +136,23 @@ describe('test for the hde-disk-store module', function () {
 		});	
 	});
 
+	describe('keys', function() {
+
+		it('simple keys test', function (done) {
+			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
+			var data = 'just a string with data';
+			s.set('key123', data, function (err, data2) {
+				assert(err === null);
+				s.keys(function(err, keys) {
+					assert(err === null);
+					assert(keys.length === 1);
+					assert(keys[0] === 'key123');
+					done();
+				});
+			});
+		});
+	});
+
 	describe('del / reset', function () {
 
 		it('simple del test for not existing key', function (done)
