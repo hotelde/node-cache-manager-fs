@@ -10,6 +10,7 @@ var crypto = require('crypto');
 var path = require('path');
 var async = require('async');
 var extend = require('extend');
+var uuid = require('uuid');
 
 /**
  * Export 'DiskStore'
@@ -141,7 +142,7 @@ DiskStore.prototype.set = function (key, val, options, cb) {
   	key: key,
   	value: val,
   	expires: Date.now() + ((ttl || 60) * 1000),
-  	filename: this.options.path + '/cache_' + crypto.randomBytes(4).readUInt32LE(0) + '.dat'
+  	filename: this.options.path + '/cache_' + uuid.v4() + '.dat'
   });
 
   var stream = JSON.stringify(metaData);
