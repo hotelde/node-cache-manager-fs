@@ -1,6 +1,6 @@
 {
   "name": "cache-manager-fs",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "file system store for node cache manager",
   "keywords": [
     "cache-manager",
