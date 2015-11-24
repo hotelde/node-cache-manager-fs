@@ -1,6 +1,6 @@
 {
   "name": "cache-manager-fs",
-  "version": "1.0.2",
+  "version": "1.0.1",
   "description": "file system store for node cache manager",
   "keywords": [
     "cache-manager",
@@ -17,29 +17,21 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "coverage": "npm run create-coverage && npm run show-coverage",
+    "coverage" : "npm run create-coverage && npm run show-coverage",
     "create-coverage": "node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec -t 5000",
-    "show-coverage": "start coverage\\lcov-report\\index.html"
+    "show-coverage" : "start coverage\\lcov-report\\index.html"
   },
   "author": "Markus Pfann",
   "license": "ISC",
   "dependencies": {
     "async": "^1.4.2",
-    "cache-manager": "^1.1.0",
+    "cache-manager": "^1.1.0",    
     "extend": "^3.0.0",
     "fs-promise": "^0.3.1"
   },
   "devDependencies": {
     "chai": "^3.3.0",
-    "eslint": "^1.10.1",
     "istanbul": "^0.4.0",
     "mocha": "^2.3.3"
-  },
-  "eslintConfig": {
-      "env": {
-          "browser": true,
-          "node": true,
-          "mocha": true
-      }
-  }  
+  }
 }
