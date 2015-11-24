@@ -1,24 +1,26 @@
+/*eslint-env node, mocha */
+
 'use strict';
 
 /**
  * Module dependencies
  */
-var noop = function () {};
-var fs = require("fs");
-var fsp = require("fs-promise");
+var noop = function noop() {};
+var fs = require('fs');
+var fsp = require('fs-promise');
 var crypto = require('crypto');
 var path = require('path');
 var async = require('async');
 var extend = require('extend');
-
+ 
 /**
  * Export 'DiskStore'
  */
 
 module.exports = {
-  create : function (args) {
+	create : function main (args) {
 		return new DiskStore(args && args.options ? args.options : args);
-  }
+	}
 };
 
 /**
@@ -75,7 +77,7 @@ function DiskStore (options) {
 /**
  * indicate, whether a key is cacheable
  */
-DiskStore.prototype.isCacheableValue = function (value) {
+DiskStore.prototype.isCacheableValue = function isCacheableValue(value) {
 
 	return value !== null && value !== undefined;
 };
@@ -83,9 +85,9 @@ DiskStore.prototype.isCacheableValue = function (value) {
 /**
  * delete an entry from the cache
  */
-DiskStore.prototype.del = function (key, cb) {
+DiskStore.prototype.del = function del(key, callback) {
 
-  cb = typeof cb === 'function' ? cb : noop;
+  var cb = typeof callback === 'function' ? callback : noop;
 
   // get the metainformations for the key
 	var metaData = this.collection[key];
@@ -97,55 +99,53 @@ DiskStore.prototype.del = function (key, cb) {
 
   // check if the filename is set
   if (!metaData.filename) {
-
-	  return cb(null);
+		return cb(null);
   }
 
   // check for existance of the file
   fsp.exists(metaData.filename).
-  then(function(exists) {
+  then(function exists(exists) {
 	if (exists) {
-		return;		 
-	} 
-	reject();	
-  })    
-  .then(function() {
-	  // delete the file
-	  fsp.unlink(metaData.filename)
-  }, function() {
-	  // not found 
-	  cb(null);
-  }).then(function() {
-	  // update internal properties
-	  this.currentsize -= metaData.size;
-	  this.collection[key] = null;
-	  delete this.collection[key];
-      cb(null);	  
-  }.bind(this)).catch(function(err) {
-	  cb(null);
+		return;
+	}
+	reject();
+  })
+  .then(function unlink() {
+	// delete the file
+	fsp.unlink(metaData.filename);
+  }, function notfound() {
+	// not found
+	cb(null);
+  }).then(function update() {
+	// update internal properties
+	this.currentsize -= metaData.size;
+	this.collection[key] = null;
+	delete this.collection[key];
+	cb(null);
+  }.bind(this)).catch(function error() {
+	cb(null);
   });
 };
 
 /**
  * set a key into the cache
  */
-DiskStore.prototype.set = function (key, val, options, cb) {
-
-	cb = typeof cb === 'function' ? cb : noop;
-
+DiskStore.prototype.set = function set(key, val, options, callback) {
+	
+  var cb = typeof callback === 'function' ? callback : noop;
   if (typeof options === 'function') {
 		cb = options;
 		options = null;
   }
 
   // get ttl
-  var ttl = (options && (options.ttl || options.ttl === 0)) ? options.ttl : this.options.ttl;
+  var ttl = (options && (options.ttl || options.ttl === 0)) ? options.ttl : this.options.ttl;  
 
   var metaData = extend({}, new MetaData(), {
-  	key: key,
-  	value: val,
-  	expires: Date.now() + ((ttl || 60) * 1000),
-  	filename: this.options.path + '/cache_' + crypto.randomBytes(4).readUInt32LE(0) + '.dat'
+	key: key,
+	value: val,
+	expires: Date.now() + ((ttl || 60) * 1000),
+	filename: this.options.path + '/cache_' + crypto.randomBytes(4).readUInt32LE(0) + '.dat'
   });
 
   var stream = JSON.stringify(metaData);
@@ -153,41 +153,39 @@ DiskStore.prototype.set = function (key, val, options, cb) {
   metaData.size = stream.length;
 
   if (this.options.maxsize && metaData.size > this.options.maxsize) {
-  	return cb('Item size too big.');
+	return cb('Item size too big.');
   }
 
   // remove the key from the cache (if it already existed, this updates also the current size of the store)
-  this.del(key, function (err) {
+  this.del(key, function del(err) {
 
 		if (err) {
-	  	return cb(err);
+			return cb(err);
 		}
 
 		// check used space and remove entries if we use to much space
-		this.freeupspace(function () {
-
-		  try {
-
+		this.freeupspace(function freeup() {
+			try {
 				// write data into the cache-file
-				fs.writeFile(metaData.filename, stream, function (err) {
+				fs.writeFile(metaData.filename, stream, function error(err) {
 
-				  if (err) {
-						return cb(err);
-				  }
+				if (err) {
+					return cb(err);
+				}
 
-				  // remove data value from memory
-				  metaData.value = null;
-				  delete metaData.value;
+				// remove data value from memory
+				metaData.value = null;
+				delete metaData.value;
 
-				  this.currentsize += metaData.size;
+				this.currentsize += metaData.size;
 
-				  // place element with metainfos in internal collection
-				  this.collection[metaData.key] = metaData;
-				  return cb(null, val);
+				// place element with metainfos in internal collection
+				this.collection[metaData.key] = metaData;
+				return cb(null, val);
 
 				}.bind(this));
 
-		  } catch(err) {
+		  } catch (err) {
 
 				return cb(err);
 		  }
@@ -201,7 +199,7 @@ DiskStore.prototype.set = function (key, val, options, cb) {
 /**
  * helper method to free up space in the cache (regarding the given spacelimit)
  */
-DiskStore.prototype.freeupspace = function (cb) {
+DiskStore.prototype.freeupspace = function freeupspace(cb) {
 
   cb = typeof cb === 'function' ? cb : noop;
 
@@ -222,7 +220,12 @@ DiskStore.prototype.freeupspace = function (cb) {
 	// for this we need a sorted list basend on the expire date of the entries (descending)
 	var tuples = [], key;
 	for (key in this.collection) {
+		if (!this.collection.hasOwnProperty(key))
+		{
+			continue;
+		}
 		tuples.push([key, this.collection[key].expires]);
+		
 	}
 
 	tuples.sort(function sort (a, b) {
@@ -238,7 +241,7 @@ DiskStore.prototype.freeupspace = function (cb) {
 /**
  * freeup helper for asnyc space freeup
  */
-DiskStore.prototype.freeupspacehelper = function (tuples, cb) {
+DiskStore.prototype.freeupspacehelper = function freeupspacehelper(tuples, cb) {
 
 	// check, if we have any entry to process
 	if (tuples.length === 0) {
@@ -270,7 +273,7 @@ DiskStore.prototype.freeupspacehelper = function (tuples, cb) {
 /**
  * get entry from the cache
  */
-DiskStore.prototype.get = function (key, cb) {
+DiskStore.prototype.get = function get(key, cb) {
 
 	cb = typeof cb === 'function' ? cb : noop;
 
@@ -287,7 +290,7 @@ DiskStore.prototype.get = function (key, cb) {
   if (data.expires < new Date()) {
 
 	  // delete the elemente from the store
-	  this.del(key, function (err) {
+	  this.del(key, function err(err) {
 		return cb(err, null);	  
 	  });	  
   } else {
@@ -295,7 +298,7 @@ DiskStore.prototype.get = function (key, cb) {
 		// try to read the file
 		try {
 
-			fs.readFile(data.filename, function (err, fileContent) {
+			fs.readFile(data.filename, function callback(err, fileContent) {
 				if (err) {
 					return cb(err);
 				}
@@ -304,17 +307,33 @@ DiskStore.prototype.get = function (key, cb) {
 				cb(null, diskdata.value);
 			});
 
-		} catch(err) {
+		} catch (err) {
 
 			cb(err);
 		}
   }
 };
 
+DiskStore.prototype.keys = function keys(cb)
+{
+	var keys = [];
+	for (var key in this.collection) {
+		if (this.collection.hasOwnProperty(key)) { //to be safe
+			keys.push(key);
+		}
+	}
+	if (cb) {
+		cb(null, keys);
+		return;
+	}
+
+	return keys;
+};
+
 /**
  * cleanup cache on disk -> delete all used files from the cache
  */
-DiskStore.prototype.reset = function (key, cb) {
+DiskStore.prototype.reset = function reset(key, cb) {
 
   cb = typeof cb === 'function' ? cb : noop;
 
@@ -337,18 +356,17 @@ DiskStore.prototype.reset = function (key, cb) {
 		}
 
 		async.eachSeries(this.collection, 
-			function (elementKey, callback) {
+			function del(elementKey, callback) {
 
 				this.del(elementKey);
 				callback();
 			}.bind(this), 
-			function () {
-
+			function error() {
 				cb(null);
 			}
 		);
 
-  } catch(err) {
+  } catch (err) {
 
 		return cb(err);
   }
@@ -358,25 +376,25 @@ DiskStore.prototype.reset = function (key, cb) {
 /**
  * helper method to clean all expired files
  */
-DiskStore.prototype.cleanExpired = function () {
-
+DiskStore.prototype.cleanExpired = function cleanExpired() {
 	var key, entry;
-
-  for (key in this.collection) {
-
+	for (key in this.collection) 
+	{
+		if (!this.collection.hasOwnProperty(key))
+		{
+			continue;
+		}		
 		entry = this.collection[key];
-
 		if (entry.expires < new Date()) {
-
-		  this.del(entry.key);
+			this.del(entry.key);
 		}
-  }
-}
+	}
+};
 
 /**
  * clean the complete cache and all(!) files in the cache directory
  */
-DiskStore.prototype.cleancache = function (cb) {
+DiskStore.prototype.cleancache = function cleancache(cb) {
 
 	cb = typeof cb === 'function' ? cb : noop;
 
@@ -387,19 +405,15 @@ DiskStore.prototype.cleancache = function (cb) {
   var files = fs.readdirSync(this.options.path);
 
   files
-  	.map(function (file) {
-
+  	.map(function pathjoin(file) {
 	  	return path.join(this.options.path, file);
   	}.bind(this))
-  	.filter(function (file) {
-
+  	.filter(function filter(file) {
 	  	return fs.statSync(file).isFile();
   	}.bind(this))
-  	.forEach(function (file) {
-
+  	.forEach(function unlink(file) {
 	  	fs.unlinkSync(file);
   	}.bind(this));
-
   cb(null);
 
 };
@@ -407,54 +421,54 @@ DiskStore.prototype.cleancache = function (cb) {
 /**
  * fill the cache from the cache directory (usefull e.g. on server/service restart)
  */
-DiskStore.prototype.intializefill = function (cb) {
+DiskStore.prototype.intializefill = function intializefill(cb) {
   
 	cb = typeof cb === 'function' ? cb : noop;
 
   // get the current working directory
-  fs.readdir(this.options.path, function (err, files) {
+  fs.readdir(this.options.path, function getfiles(err, files) {
 
 		// get potential files from disk
-		files = files.map(function (filename) {
+		files = files.map(function pathjoin(filename) {
 
 				return path.join(this.options.path, filename);
-			}.bind(this)).filter(function (filename) {
+			}.bind(this)).filter(function filterforfiles(filename) {
 
 				return fs.statSync(filename).isFile();
 			});
 		
 		// use async to process the files and send a callback after completion
-		async.eachSeries(files, function (filename, callback) {
+		async.eachSeries(files, function processfile(filename, callback) {
 
-		  fs.readFile(filename, function (err, data) {
+		  fs.readFile(filename, function readFile(err, data) {
 
 				// stop file processing when there was an reading error
 				if (err) {
 				  return callback();
 				}
 
+				var diskdata;
 				try {
 
 				  // get the json out of the data
-				  var diskdata = JSON.parse(data);
+				  diskdata = JSON.parse(data);
 
-				} catch(err) {
+				} catch (err) {
 
 				  // when the deserialize doesn't work, probably the file is uncomplete - so we delete it and ignore the error
 				  try {
 				  	fs.unlinksync(filename);
-				  } catch(ignore) {
-
+				  } catch (ignore) {
+					return callback();
 				  }
-
 				  return callback();
 				}
 
 				// update the size in the metadata - this value isn't correctly stored in the file
 				diskdata.size = data.length;
 
-				// update collection size 
-				this.currentsize+=data.length;
+				// update collection size
+				this.currentsize += data.length;
 
 				// remove the entrys content - we don't want the content in the memory (only the meta informations)
 				diskdata.value = null;
@@ -466,7 +480,7 @@ DiskStore.prototype.intializefill = function (cb) {
 				// check for expiry - in this case we instantly delete the entry
 				if (diskdata.expires < new Date()) {
 
-				  this.del(diskdata.key, function () {
+				  this.del(diskdata.key, function delcallback() {
 
 						return callback();
 				  });
@@ -476,7 +490,7 @@ DiskStore.prototype.intializefill = function (cb) {
 				}
 		  }.bind(this));
 		
-		}.bind(this), function (err) {
+		}.bind(this), function error(err) {
 
 		  cb(err || null);
 

@@ -203,6 +203,35 @@ describe('test for the hde-disk-store module', function () {
 			});
 		});
 	});
+	
+	describe('keys', function() {
+		it('retrieve sync', function(done) {
+			var s = store.create({options: {path:cacheDirectory, preventfill:true}});					
+			var data = 'a lot of data in a file';
+			s.set('asdf',data, function (err)
+			{
+				assert(err === null);
+				var keys = s.keys();
+				assert(keys.length === 1);
+				assert(keys[0] === 'asdf');
+				done();
+			});			
+		});
+		it('retrieve async', function(done) {
+			var s = store.create({options: {path:cacheDirectory, preventfill:true}});					
+			var data = 'a lot of data in a file';
+			s.set('asdf',data, function (err)
+			{
+				assert(err === null);
+				s.keys(function callback(err2, keys) {
+					assert(err2 === null);
+					assert(keys.length === 1);
+					assert(keys[0] === 'asdf');
+					done();
+				});
+			});						
+		});
+	});
 
 	describe('isCacheableValue', function () {
 
