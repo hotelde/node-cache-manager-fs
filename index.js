@@ -11,6 +11,8 @@ var path = require('path');
 var async = require('async');
 var extend = require('extend');
 var uuid = require('uuid');
+var zlib = require('zlib');
+const gzip = zlib.createGzip();
 
 /**
  * Export 'DiskStore'
@@ -48,7 +50,8 @@ function DiskStore (options) {
 	this.options = extend({
 		path: 'cache/',
 		ttl: 60,
-		maxsize: 0
+		maxsize: 0,
+        zip: false
 	}, options);
 
 
@@ -123,6 +126,30 @@ DiskStore.prototype.del = function (key, cb) {
   });
 };
 
+
+/**
+ * zip an input string if options want that
+ */
+DiskStore.prototype.zipIfNeeded = function(data, cb)
+{
+    if (this.options.zip)
+    {         
+        zlib.deflate(data, function(err, buffer) {            
+        if (!err) {
+            cb(null, buffer);
+        }
+        else
+        {
+            cb(err, null);
+        }
+        });          
+    }
+    else
+    {
+        cb(null, data);
+    }
+}
+
 /**
  * set a key into the cache
  */
@@ -153,6 +180,7 @@ DiskStore.prototype.set = function (key, val, options, cb) {
   	return cb('Item size too big.');
   }
 
+
   // remove the key from the cache (if it already existed, this updates also the current size of the store)
   this.del(key, function (err) {
 
@@ -162,28 +190,30 @@ DiskStore.prototype.set = function (key, val, options, cb) {
 
 		// check used space and remove entries if we use to much space
 		this.freeupspace(function () {
-
+            
 		  try {
+                this.zipIfNeeded(stream, function(err, processedStream) {
+                                    
+                    // write data into the cache-file
+                    fs.writeFile(metaData.filename, processedStream, function (err) {
+                        
+                        if (err) {
+                                return cb(err);
+                        }
+                        
+                        // remove data value from memory
+                        metaData.value = null;
+                        delete metaData.value;
+                        
+                        this.currentsize += metaData.size;
+                        
+                        // place element with metainfos in internal collection
+                        this.collection[metaData.key] = metaData;
+                        return cb(null, val);
 
-				// write data into the cache-file
-				fs.writeFile(metaData.filename, stream, function (err) {
-
-				  if (err) {
-						return cb(err);
-				  }
-
-				  // remove data value from memory
-				  metaData.value = null;
-				  delete metaData.value;
-
-				  this.currentsize += metaData.size;
-
-				  // place element with metainfos in internal collection
-				  this.collection[metaData.key] = metaData;
-				  return cb(null, val);
-
-				}.bind(this));
-
+                    }.bind(this));
+                }.bind(this));
+                
 		  } catch(err) {
 
 				return cb(err);
@@ -288,18 +318,28 @@ DiskStore.prototype.get = function (key, cb) {
 		return cb(err, null);
 	  });
   } else {
-
+      
 		// try to read the file
 		try {
-
+            
 			fs.readFile(data.filename, function (err, fileContent) {
 				if (err) {
 					return cb(err);
 				}
-
-				var diskdata = JSON.parse(fileContent);
-				cb(null, diskdata.value);
-			});
+                if (this.options.zip)
+                {
+                    zlib.unzip(fileContent, function(err, buffer)
+                    {
+                        var diskdata = JSON.parse(buffer);
+                        cb(null, diskdata.value);                                            
+                    });
+                }
+                else
+                {
+                    var diskdata = JSON.parse(fileContent);
+                    cb(null, diskdata.value);                    
+                }
+			}.bind(this));
 
 		} catch(err) {
 

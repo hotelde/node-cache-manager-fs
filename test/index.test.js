@@ -248,6 +248,23 @@ describe('test for the hde-disk-store module', function () {
 			assert(!s.isCacheableValue(undefined));
 		});
 	});
+    
+    describe('zip test', function() {
+       it('save and load again', function(done) {
+			// create store
+			var s=store.create({options: {zip:true, path:cacheDirectory, preventfill:true}});
+            var datastring = "bla only for test \n and so on...";
+            var dataKey = "zipDataTest";
+			s.set(dataKey, datastring, function (err) {
+				assert(err === null);
+                s.get(dataKey, function (err, data) {
+                    assert(err === null);
+                    assert(data == datastring);
+                    done();
+                });
+            });           
+       }) 
+    });
 
 	describe('integrationtests', function () {
 
