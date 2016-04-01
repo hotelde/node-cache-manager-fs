@@ -297,7 +297,7 @@ DiskStore.prototype.freeupspacehelper = function (tuples, cb) {
 /**
  * get entry from the cache
  */
-DiskStore.prototype.get = function (key, cb) {
+DiskStore.prototype.get = function (key, options, cb) {
 
 	cb = typeof cb === 'function' ? cb : noop;
 
