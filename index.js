@@ -348,23 +348,23 @@ DiskStore.prototype.get = function (key, options, cb) {
                     zlib.unzip(fileContent, function(err, buffer)
                     {
                         var diskdata;
-			if(reviveBuffers) {
-				diskdata = JSON.parse(buffer, bufferReviver);
-			} else {
-				diskdata = JSON.parse(buffer);
-			}
+                        if(reviveBuffers) {
+                            diskdata = JSON.parse(buffer, bufferReviver);
+                        } else {
+                            diskdata = JSON.parse(buffer);
+                        }
                         cb(null, diskdata.value);                                            
                     });
                 }
                 else
                 {
-                    	var diskdata;
-			if(reviveBuffers) {
-				diskdata = JSON.parse(buffer, bufferReviver);
-			} else {
-				diskdata = JSON.parse(buffer);
-			}
-                    	cb(null, diskdata.value);                    
+                    var diskdata;
+                    if(reviveBuffers) {
+                        diskdata = JSON.parse(buffer, bufferReviver);
+                    } else {
+                        diskdata = JSON.parse(buffer);
+                    }
+                    cb(null, diskdata.value);
                 }
 			}.bind(this));
 
