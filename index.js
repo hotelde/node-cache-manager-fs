@@ -358,13 +358,13 @@ DiskStore.prototype.get = function (key, options, cb) {
                 }
                 else
                 {
-                    var diskdata;
-                    if(reviveBuffers) {
-                        diskdata = JSON.parse(buffer, bufferReviver);
-                    } else {
-                        diskdata = JSON.parse(buffer);
-                    }
-                    cb(null, diskdata.value);
+					var diskdata;
+					if (reviveBuffers) {
+						diskdata = JSON.parse(fileContent, bufferReviver);
+					} else {
+						diskdata = JSON.parse(fileContent);
+					}
+					cb(null, diskdata.value);
                 }
 			}.bind(this));
 
