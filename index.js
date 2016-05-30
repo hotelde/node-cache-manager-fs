@@ -299,6 +299,10 @@ DiskStore.prototype.freeupspacehelper = function (tuples, cb) {
  */
 DiskStore.prototype.get = function (key, options, cb) {
 
+	if (typeof options === 'function') {
+		cb = options;
+	}
+
 	cb = typeof cb === 'function' ? cb : noop;
 
   // get the metadata from the collection
