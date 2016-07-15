@@ -25,6 +25,22 @@ module.exports = {
 };
 
 /**
+ * Helper function that revives buffers from object representation on JSON.parse
+ */
+function bufferReviver(k, v) {
+	if (
+		v !== null &&
+		typeof v === 'object' &&
+		'type' in v &&
+		v.type === 'Buffer' &&
+		'data' in v &&
+		Array.isArray(v.data)) {
+		return new Buffer(v.data);
+	}
+	return v;
+}
+
+/**
  * helper object with meta-informations about the cached data
  */
 function MetaData () {
@@ -326,18 +342,29 @@ DiskStore.prototype.get = function (key, options, cb) {
 				if (err) {
 					return cb(err);
 				}
+		var reviveBuffers = this.options.reviveBuffers;
                 if (this.options.zip)
                 {
                     zlib.unzip(fileContent, function(err, buffer)
                     {
-                        var diskdata = JSON.parse(buffer);
+                        var diskdata;
+                        if(reviveBuffers) {
+                            diskdata = JSON.parse(buffer, bufferReviver);
+                        } else {
+                            diskdata = JSON.parse(buffer);
+                        }
                         cb(null, diskdata.value);                                            
                     });
                 }
                 else
                 {
-                    var diskdata = JSON.parse(fileContent);
-                    cb(null, diskdata.value);                    
+					var diskdata;
+					if (reviveBuffers) {
+						diskdata = JSON.parse(fileContent, bufferReviver);
+					} else {
+						diskdata = JSON.parse(fileContent);
+					}
+					cb(null, diskdata.value);
                 }
 			}.bind(this));
 

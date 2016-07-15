@@ -44,6 +44,7 @@ options.path = 'cache/'; // path for cached files
 options.preventfill = false; // prevent filling of the cache with the files from the cache-directory
 options.fillcallback = null; // callback fired after the initial cache filling is completed
 options.zip = false; // if true the cached files will be zipped to save diskspace
+options.reviveBuffers = true; // if true buffers are returned from cache as buffers, not objects
 
 ```
 ## Installation
