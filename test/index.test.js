@@ -1,6 +1,8 @@
 var assert = require('chai').assert;
 var store = require('../index.js')
 var fs = require('fs');
+var path = require('path');
+var uuid = require('uuid');
 var cacheDirectory = 'test/customCache';
 
 describe('test for the hde-disk-store module', function () {
@@ -248,7 +250,7 @@ describe('test for the hde-disk-store module', function () {
 			assert(!s.isCacheableValue(undefined));
 		});
 	});
-    
+
     describe('zip test', function() {
        it('save and load again', function(done) {
 			// create store
@@ -262,8 +264,8 @@ describe('test for the hde-disk-store module', function () {
                     assert(data == datastring);
                     done();
                 });
-            });           
-       }) 
+            });
+       })
     });
 
 	describe('integrationtests', function () {
@@ -340,5 +342,81 @@ describe('test for the hde-disk-store module', function () {
 				});
 			});
 		});
+
+        describe('can handle unexpected files in the cache directory', function () {
+            var originalUUIDv4;
+            var mockUUID;
+            var s;
+
+            before(function () {
+                originalUUIDv4 = uuid.v4;
+                uuid.v4 = function mockv4() {
+                    if (mockUUID) {
+                        return mockUUID
+                    };
+                    return originalUUIDv4();
+                }
+                s = store.create({ options: { path:cacheDirectory, preventfill: true } });
+
+                // simulate cruft files that may exist in the cache directory
+                fs.writeFileSync(path.join(cacheDirectory, '.DS_Store'), 'not JSON data');
+            });
+
+            afterEach(function () {
+                s.cleancache();
+            });
+
+            after(function () {
+                uuid.v4 = originalUUIDv4;
+            })
+
+            it('skips over non-cache files', function (done) {
+                // create store and set some entries
+                s.set('key0', 'data0', function (err) {
+
+                    // ungracefully reset the cache
+                    s.collection = {};
+                    s.currentsize = 0;
+
+                    s.intializefill(function (err) {
+                        s.get('key0', function (err, data) {
+                            assert(data === 'data0', `expected "data0", but received "${data}"`);
+                            fs.readdir(cacheDirectory, function (err, files) {
+                                assert(files.includes('.DS_Store'), '".DS_Store" should exist.');
+                                done();
+                            });
+                        });
+                    });
+                });
+            });
+
+            it('truncated JSON files', function (done) {
+                mockUUID = '8f1a33a9-9984-4e98-9c72-3bea37dab031';
+                var cacheFileName = 'cache_' + mockUUID + '.dat';
+                var cachedFilePath = path.join(cacheDirectory, cacheFileName);
+
+                // set an entry
+                s.set('getTruncated', 'some data...', function (err) {
+                    // simulate truncated .dat file
+                    var tmpData = fs.readFileSync(cachedFilePath, 'utf8');
+                    fs.writeFileSync(cachedFilePath, tmpData.substring(0, 20), 'utf8');
+
+                    // ungracefully reset the cache
+                    s.collection = {};
+                    s.currentsize = 0;
+
+                    // re-init the cache from files saved in directory
+                    s.intializefill(function () {
+                        // Callback to run after fill has completed
+                        s.get('getTruncated', function (err, data) {
+                            var files = fs.readdirSync(cacheDirectory);
+                            assert(data === null, `expected null but received "${data}"`);
+                            assert(!files.includes(cacheFileName), `"${cacheFileName}" should not exist`);
+                            done();
+                        });
+                    });
+                });
+            });
+        });
 	});
 });
