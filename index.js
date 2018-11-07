@@ -149,8 +149,8 @@ DiskStore.prototype.del = function (key, cb) {
 DiskStore.prototype.zipIfNeeded = function(data, cb)
 {
     if (this.options.zip)
-    {         
-        zlib.deflate(data, function(err, buffer) {            
+    {
+        zlib.deflate(data, function(err, buffer) {
         if (!err) {
             cb(null, buffer);
         }
@@ -158,7 +158,7 @@ DiskStore.prototype.zipIfNeeded = function(data, cb)
         {
             cb(err, null);
         }
-        });          
+        });
     }
     else
     {
@@ -206,30 +206,30 @@ DiskStore.prototype.set = function (key, val, options, cb) {
 
 		// check used space and remove entries if we use to much space
 		this.freeupspace(function () {
-            
+
 		  try {
                 this.zipIfNeeded(stream, function(err, processedStream) {
-                                    
+
                     // write data into the cache-file
                     fs.writeFile(metaData.filename, processedStream, function (err) {
-                        
+
                         if (err) {
                                 return cb(err);
                         }
-                        
+
                         // remove data value from memory
                         metaData.value = null;
                         delete metaData.value;
-                        
+
                         this.currentsize += metaData.size;
-                        
+
                         // place element with metainfos in internal collection
                         this.collection[metaData.key] = metaData;
                         return cb(null, val);
 
                     }.bind(this));
                 }.bind(this));
-                
+
 		  } catch(err) {
 
 				return cb(err);
@@ -338,10 +338,10 @@ DiskStore.prototype.get = function (key, options, cb) {
 		return cb(err, null);
 	  });
   } else {
-      
+
 		// try to read the file
 		try {
-            
+
 			fs.readFile(data.filename, function (err, fileContent) {
 				if (err) {
 					return cb(err);
@@ -357,7 +357,7 @@ DiskStore.prototype.get = function (key, options, cb) {
                         } else {
                             diskdata = JSON.parse(buffer);
                         }
-                        cb(null, diskdata.value);                                            
+                        cb(null, diskdata.value);
                     });
                 }
                 else
@@ -499,6 +499,10 @@ DiskStore.prototype.intializefill = function (cb) {
 			}.bind(this)).filter(function (filename) {
 
 				return fs.statSync(filename).isFile();
+			}).filter(function (filename) {
+
+				var re = /^cache_[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}.dat$/i
+				return re.test(path.basename(filename));
 			});
 
 		// use async to process the files and send a callback after completion
@@ -520,7 +524,7 @@ DiskStore.prototype.intializefill = function (cb) {
 
 				  // when the deserialize doesn't work, probably the file is uncomplete - so we delete it and ignore the error
 				  try {
-				  	fs.unlinksync(filename);
+				  	fs.unlinkSync(filename);
 				  } catch(ignore) {
 
 				  }
