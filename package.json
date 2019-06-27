@@ -17,9 +17,10 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "coverage": "npm run create-coverage && npm run show-coverage",
-    "create-coverage": "node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec -t 5000",
-    "show-coverage": "start coverage\\lcov-report\\index.html"
+    "cover": "nyc --no-clean npm run test",
+    "report": "nyc report --reporter=lcov --reporter=text",
+    "show-coverage": "start coverage\\lcov-report\\index.html",
+    "coverage" : "npm run cover && npm run report && npm run show-coverage"
   },
   "author": "Markus Pfann",
   "license": "ISC",
@@ -31,8 +32,11 @@
     "uuid": "^2.0.1"
   },
   "devDependencies": {
-    "chai": "^3.3.0",
-    "istanbul": "^0.4.0",
-    "mocha": "^2.3.3"
+    "chai": "^3.3.0",    
+    "mocha": "^2.3.3",
+    "nyc": "^14.1.1"
+  },
+  "nyc": {
+    "all": true
   }
 }

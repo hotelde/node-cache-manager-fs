@@ -188,7 +188,7 @@ describe('test for the hde-disk-store module', function () {
 						assert(err==null);
 						done();
 					});
-				})
+				});
 			});
 
 
