@@ -103,8 +103,12 @@ DiskStore.prototype.isCacheableValue = function (value) {
 /**
  * delete an entry from the cache
  */
-DiskStore.prototype.del = function (key, cb) {
-
+DiskStore.prototype.del = function (key, options, cb) {
+  
+  if (typeof options === 'function') {
+        cb = options;
+        options = null;
+  }
   cb = typeof cb === 'function' ? cb : noop;
 
   // get the metainformations for the key
