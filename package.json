@@ -1,6 +1,6 @@
 {
   "name": "cache-manager-fs",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "file system store for node cache manager",
   "keywords": [
     "cache-manager",
@@ -20,7 +20,7 @@
     "cover": "nyc --no-clean npm run test",
     "report": "nyc report --reporter=lcov --reporter=text",
     "show-coverage": "start coverage\\lcov-report\\index.html",
-    "coverage" : "npm run cover && npm run report && npm run show-coverage"
+    "coverage": "npm run cover && npm run report && npm run show-coverage"
   },
   "author": "Markus Pfann",
   "license": "ISC",
@@ -32,11 +32,15 @@
     "uuid": "^2.0.1"
   },
   "devDependencies": {
-    "chai": "^3.3.0",    
+    "chai": "^3.3.0",
     "mocha": "^2.3.3",
     "nyc": "^14.1.1"
   },
   "nyc": {
     "all": true
+  },
+  "homepage": "https://github.com/hotelde/node-cache-manager-fs#readme",
+  "directories": {
+    "test": "test"
   }
 }
