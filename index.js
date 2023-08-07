@@ -70,27 +70,24 @@ function DiskStore (options) {
         zip: false
 	}, options);
 
+	// check storage directory for existence (or create it)
+	if (!fs.existsSync(this.options.path)) {
+			fs.mkdirSync(this.options.path);
+	}
 
-  // check storage directory for existence (or create it)
-  if (!fs.existsSync(this.options.path)) {
-		fs.mkdirSync(this.options.path);
-  }
+	this.name = 'diskstore';
 
-  this.name = 'diskstore';
+	// current size of the cache
+	this.currentsize = 0;
 
-  // current size of the cache
-  this.currentsize = 0;
+	// internal array for informations about the cached files - resists in memory
+	this.collection = {};
 
-  // internal array for informations about the cached files - resists in memory
-  this.collection = {};
-
-  // fill the cache on startup with already existing files
-  if (!options.preventfill) {
-
+	// fill the cache on startup with already existing files
+	if (!options.preventfill) {
 		this.intializefill(options.fillcallback);
 	}
 }
-
 
 /**
  * indicate, whether a key is cacheable
@@ -166,6 +163,25 @@ DiskStore.prototype.zipIfNeeded = function(data, cb)
     }
     else
     {
+        cb(null, data);
+    }
+}
+
+/**
+ *unpzip an input string if options want that
+ */
+DiskStore.prototype.unzipIfNeeded = function (data, cb) {
+    if (this.options.zip) {
+        zlib.unzip(data, function (err, buffer) {
+            if (!err) {
+                cb(null, buffer);
+            }
+            else {
+                cb(err, null);
+            }
+        });
+    }
+    else {
         cb(null, data);
     }
 }
@@ -350,37 +366,25 @@ DiskStore.prototype.get = function (key, options, cb) {
 				if (err) {
 					return cb(err);
 				}
-		var reviveBuffers = this.options.reviveBuffers;
-                if (this.options.zip)
-                {
-                    zlib.unzip(fileContent, function(err, buffer)
-                    {
-                        var diskdata;
-                        if(reviveBuffers) {
-                            diskdata = JSON.parse(buffer, bufferReviver);
-                        } else {
-                            diskdata = JSON.parse(buffer);
-                        }
-                        cb(null, diskdata.value);
-                    });
-                }
-                else
-                {
+
+				this.unzipIfNeeded(fileContent, function(err, decompressedContent) {
+					if (err) {
+						return cb(err);
+					}
+
 					var diskdata;
-					if (reviveBuffers) {
-						diskdata = JSON.parse(fileContent, bufferReviver);
+					if(this.options.reviveBuffers) {
+						diskdata = JSON.parse(decompressedContent, bufferReviver);
 					} else {
-						diskdata = JSON.parse(fileContent);
+						diskdata = JSON.parse(decompressedContent);
 					}
 					cb(null, diskdata.value);
-                }
+				}.bind(this));
 			}.bind(this));
-
 		} catch(err) {
-
 			cb(err);
 		}
-  }
+  	}
 };
 
 /**
@@ -519,55 +523,53 @@ DiskStore.prototype.intializefill = function (cb) {
 				  return callback();
 				}
 
-				try {
+				this.unzipIfNeeded(data, function(err, unzippedData) {
+					try {
 
-				  // get the json out of the data
-				  var diskdata = JSON.parse(data);
-
-				} catch(err) {
-
-				  // when the deserialize doesn't work, probably the file is uncomplete - so we delete it and ignore the error
-				  try {
-				  	fs.unlinkSync(filename);
-				  } catch(ignore) {
-
-				  }
-
-				  return callback();
-				}
-
-				// update the size in the metadata - this value isn't correctly stored in the file
-				diskdata.size = data.length;
-
-				// update collection size
-				this.currentsize+=data.length;
-
-				// remove the entrys content - we don't want the content in the memory (only the meta informations)
-				diskdata.value = null;
-				delete diskdata.value;
-
-				// and put the entry in the store
-				this.collection[diskdata.key] = diskdata;
-
-				// check for expiry - in this case we instantly delete the entry
-				if (diskdata.expires < new Date()) {
-
-				  this.del(diskdata.key, function () {
-
+						// get the json out of the data
+						var diskdata = JSON.parse(unzippedData);
+	  
+					  } catch(err) {
+	  
+						// when the deserialize doesn't work, probably the file is uncomplete - so we delete it and ignore the error
+						try {
+							fs.unlinkSync(filename);
+						} catch(ignore) {
+	  
+						}
+	  
 						return callback();
-				  });
-				} else {
-
-				  return callback();
-				}
-		  }.bind(this));
-
+					  }
+	  
+					  // update the size in the metadata - this value isn't correctly stored in the file
+					  diskdata.size = data.length;
+	  
+					  // update collection size
+					  this.currentsize+=data.length;
+	  
+					  // remove the entrys content - we don't want the content in the memory (only the meta informations)
+					  diskdata.value = null;
+					  delete diskdata.value;
+	  
+					  // and put the entry in the store
+					  this.collection[diskdata.key] = diskdata;
+	  
+					  // check for expiry - in this case we instantly delete the entry
+					  if (diskdata.expires < new Date()) {
+	  
+						this.del(diskdata.key, function () {
+	  
+							  return callback();
+						});
+					  } else {
+	  
+						return callback();
+					  }
+				}.bind(this));
+		 	}.bind(this));
 		}.bind(this), function (err) {
-
-		  cb(err || null);
-
+			cb(err || null);
 		});
-
   }.bind(this));
 
 };

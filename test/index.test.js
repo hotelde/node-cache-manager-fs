@@ -1,37 +1,38 @@
 var assert = require('chai').assert;
 var store = require('../index.js')
 var fs = require('fs');
+const removeDir = require('rimraf');
 var path = require('path');
 var uuid = require('uuid');
-var cacheDirectory = 'test/customCache';
+const cacheDirectory = __dirname + '/cache';
 
-describe('test for the hde-disk-store module', function () {
+function countFilesInCacheDir() {
+    return fs.readdirSync(cacheDirectory).length;
+}
 
-	// remove test directory after run
+describe('tests for the disk-store module', function () {
+
+	// remove test directory before each test
+	beforeEach(function (done) {
+		removeDir(cacheDirectory, function (err) {
+			cache = store.create({path: cacheDirectory});
+			done(err);
+		});
+	});
+	// remove test directory after last test
 	after(function (done) {
-		// create a test store
-		var s=store.create({options: {path:cacheDirectory, preventfill:true}});
-
-		// cleanup all entries in the cache
-		s.cleancache(function (err) {
-			assert(err === null);
-			// and remove test data directory
-			setTimeout(function () {
-
-				fs.rmdirSync(s.options.path);
-				done();
-			}, 100);
-			});
+		removeDir(cacheDirectory, done);
 	});
 
 	describe('construction', function () {
+        it('should create cache dir', function () {
+            assert(fs.existsSync(cache.options.path));
+        });
 
 		it('simple create cache test', function ()
 		{
 			// create a store with default values
 			var s = store.create();
-			// remove folder after testrun
-			after(function () { fs.rmdirSync(s.options.path); });
 			// check the creation result
 			assert.isObject(s);
 			assert.isObject(s.options);
@@ -51,12 +52,14 @@ describe('test for the hde-disk-store module', function () {
 
 	describe('get', function () {
 
-		it('simple get test with not existing key', function (done)
+		it('should return undefined on non existing key callback', function (done)
 		{
 			var s=store.create({options: {path:cacheDirectory, preventfill:true}});
 			s.get('asdf', function (err, data)
 			{
-				assert(data === null);
+                assert.strictEqual(null, err);
+				assert.strictEqual(null, data);
+//				assert(data === null);
 				done();
 			});
 		});
@@ -260,8 +263,8 @@ describe('test for the hde-disk-store module', function () {
 			s.set(dataKey, datastring, function (err) {
 				assert(err === null);
                 s.get(dataKey, function (err, data) {
-                    assert(err === null);
-                    assert(data == datastring);
+                    assert.strictEqual(err, null);
+                    assert.strictEqual(data, datastring);
                     done();
                 });
             });
@@ -283,8 +286,8 @@ describe('test for the hde-disk-store module', function () {
 						t.get('RestoreTest', function (err, data) {
 							assert(data === 'test');
 							t.get('RestoreDontSurvive', function (err,data) {
-								assert(err === null);
-								assert(data === null);
+								assert.strictEqual(err, null);
+								assert.strictEqual(data, null);
 								assert(s.currentsize > 0, 'current size not correctly initialized - '+s.currentsize);
 								done();
 							});
@@ -295,8 +298,20 @@ describe('test for the hde-disk-store module', function () {
 			});
 		});
 
-		it('max size option', function (done) {
+		it('cache initialization with zip', function (done) {
+			var s=store.create({options: {path:cacheDirectory, preventfill:true, zip:true}});
+			s.set('testkey','value', function (err) { 
+				var t = store.create({ options: {path:cacheDirectory, zip:true, fillcallback: function () {
+					//fill complete
+					t.get('testkey', function (err, data) {
+						assert.equal('value',data);
+						done();
+					});
+				}}});
+			});
+		});
 
+		it('max size option', function (done) {
 			// create store
 			var s = store.create({
 				options: {
@@ -307,32 +322,32 @@ describe('test for the hde-disk-store module', function () {
 			});
 
 			s.set('one', 'dataone', {}, function (err, val) {
-				assert(err === 'Item size too big.');
-				assert(Object.keys(s.collection).length === 0);
+				assert.strictEqual(err, 'Item size too big.');
+				assert.strictEqual(Object.keys(s.collection).length, 0);
 
 				s.set('x', 'x', { ttl: -1 }, function (err, val) {
-					assert(err === 'Item size too big.');
+					assert.strictEqual(err, 'Item size too big.');
 					assert(Object.keys(s.collection).length === 0);
 
-					s.options.maxsize = 150;
+					s.options.maxsize = 300;
 					s.set('a', 'a', { ttl: 10000 }, function (err, val) {
-						assert(err === null);
-						assert(Object.keys(s.collection).length === 1);
+						assert.strictEqual(err, null);
+						assert.equal(Object.keys(s.collection).length, 1);
 
-						s.set('b', 'b', { ttl: 100 }, function (err){
-							assert(err === null);
+						s.set('b', 'b', { ttl: 0 }, function (err){
+							assert.strictEqual(err, null);
 
 							s.set('c', 'c', { ttl: 100 }, function (err){
-								assert(err === null);
+								assert.strictEqual(err, null);
 
 								// now b should be removed from the cache, a should exists
 								s.get('a', function (err, data) {
-									assert(err === null);
-									assert(data,'a');
+									assert.strictEqual(err, null);
+									assert.equal(data,'a');
 
 									s.get('b', function (err,data){
-										assert(err === null);
-										assert(data === null);
+										assert.strictEqual(err, null);
+										assert.strictEqual(data, null);
 										done();
 									});
 								});
@@ -348,7 +363,7 @@ describe('test for the hde-disk-store module', function () {
             var mockUUID;
             var s;
 
-            before(function () {
+            beforeEach(function () {
                 originalUUIDv4 = uuid.v4;
                 uuid.v4 = function mockv4() {
                     if (mockUUID) {
@@ -380,9 +395,9 @@ describe('test for the hde-disk-store module', function () {
 
                     s.intializefill(function (err) {
                         s.get('key0', function (err, data) {
-                            assert(data === 'data0', `expected "data0", but received "${data}"`);
+                            assert.equal(data, 'data0', `expected "data0", but received "${data}"`);
                             fs.readdir(cacheDirectory, function (err, files) {
-                                assert(files.includes('.DS_Store'), '".DS_Store" should exist.');
+                                assert.isTrue(files.includes('.DS_Store'), '".DS_Store" should exist.');
                                 done();
                             });
                         });
@@ -410,8 +425,8 @@ describe('test for the hde-disk-store module', function () {
                         // Callback to run after fill has completed
                         s.get('getTruncated', function (err, data) {
                             var files = fs.readdirSync(cacheDirectory);
-                            assert(data === null, `expected null but received "${data}"`);
-                            assert(!files.includes(cacheFileName), `"${cacheFileName}" should not exist`);
+                            assert.equal(data, null, `expected null but received "${data}"`);
+                            assert.isFalse(files.includes(cacheFileName), `"${cacheFileName}" should not exist`);
                             done();
                         });
                     });
