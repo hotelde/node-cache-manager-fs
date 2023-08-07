@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "chai": "^3.3.0",
-    "mocha": "^2.3.3",
+    "mocha": "^10.1.0",
     "nyc": "^14.1.1"
   },
   "nyc": {
