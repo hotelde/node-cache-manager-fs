@@ -15,6 +15,7 @@ npm install cache-manager-fs --save
 * Saves anything that is `JSON.stringify`-able to disk
 * limit maximum size on disk
 * refill cache on startup (in case of application restart)
+* "Callback"-interface style (no promises, no async)
 
 ## Usage example
 
